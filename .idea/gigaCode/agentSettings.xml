@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GigaCodeAgentSettings">
+    <option name="autoApprovedCommands">
+      <list>
+        <Execute>
+          <option name="pattern" value="powershell.exe -Command &quot;[System.IO.File]::ReadAllText('C:\Users\Vlad\IdeaProjects\QA_Agent\.opencode\agents\requirement-review.md', [System.Text.Encoding]::UTF8)&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell.exe -Command &quot;[System.IO.File]::ReadAllText('C:\Users\Vlad\IdeaProjects\QA_Agent\.opencode\agents\QA-orchestrator.md', [System.Text.Encoding]::UTF8)&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="type &quot;C:\Users\Vlad\IdeaProjects\QA_Agent\.opencode\agents\QA-orchestrator.md&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell.exe -Command &quot;(Get-Item 'C:\Users\Vlad\IdeaProjects\QA_Agent\.opencode\agents\QA-orchestrator.md').Length&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell.exe -Command &quot;(Get-Item 'C:\Users\Vlad\IdeaProjects\QA_Agent\.opencode\agents\test-designer.md').Length&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell.exe -Command &quot;[System.IO.File]::ReadAllText('C:\Users\Vlad\IdeaProjects\QA_Agent\.opencode\agents\test-designer.md', [System.Text.Encoding]::UTF8)&quot;" />
+        </Execute>
+      </list>
+    </option>
+  </component>
+</project>
