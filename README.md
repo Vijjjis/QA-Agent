@@ -20,6 +20,7 @@
 ### 3. Tools
 
 - **Confluence** — инструмент для доступа к Confluence
+В инструменте Confluence также содержится PII-детектор для чувствительных данных
 - **MCP Jira** — MCP-сервер для доступа к Jira
 - **MCP Qase** — MCP-сервер для доступа к Qase
 
@@ -30,6 +31,14 @@ MCP заданы в корне проекта в конфигурации `openc
 - **requirement-review** — хранит артефакты работы агента `requirement-review`
 - **task-designer** — хранит артефакты работы агента `task-designer`
 - **test-designer** — хранит артефакты работы агента `test-designer`
+- **orchestrator** - хранит артефакты работы агента `QA-orchestrator`
+
+### 5. Evals
+
+Блок для Eval-тестирования.
+- **eval_runner.py** и **evaluator.py** - файлы для запуска Eval-тестирования
+- **eval_results.json** - результаты Eval-тестирования
+- **golden_dataset.json** - эталонный набор Eval-тестов
 
 ## Инструкция по запуску
 
@@ -37,8 +46,14 @@ MCP заданы в корне проекта в конфигурации `openc
 
 ### Запуск системы
 
+## Запуск AI-агента
+
 1. Задать через терминал локальные переменные `CONFLUENCE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN` для доступа к Confluence.
+2. Задать через терминал локальную переменную QASE_API_TOKEN для доступа к Qase.
 2. Выполнить команду `opencode mcp auth jira` и выполнить аутентификацию в Jira.
-3. Выполнить команду `opencode mcp auth qase` и выполнить аутентификацию в Qase.
 4. Выполнить команду `opencode`.
-5. В открывшемся окне задать необходимый User Prompt.
+5. В открывшемся окне задать необходимый User Prompt, содержащий информацию о Confluence документе с требованиями (ссылка, номер), Jira-проекте (как минимум код проекта), Qase-проекте (как минимум код проекта).
+
+## Запуск Eval-тестирования
+
+Команда python evals/eval_runner.py

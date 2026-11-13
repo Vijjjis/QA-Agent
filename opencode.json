@@ -1,14 +1,12 @@
 {
   "mcp": {
-    "servers": {
       "jira": {
         "type": "remote",
         "url": "https://mcp.atlassian.com/v2/mcp"
       },
       "qase": {
-        "type": "remote",
-        "url": "https://mcp.qase.io/mcp"
+        "type": "local",
+        "command": ["npx.cmd", "-y", "@qase/mcp-server"]
       }
-    }
   }
 }

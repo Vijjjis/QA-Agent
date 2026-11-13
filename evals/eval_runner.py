@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -119,24 +120,26 @@ for page_id, page_eval_cases in cases_by_page.items():
     # агенту не передаются.
 
     prompt = (
-        f"Выполни полный флоу агента"
-        f"со страницы pageId={page_id }"
-        f"и выполни их анализ."
+        f"Выполни полный workflow агента"
+        f"для страницы pageId={page_id} "
+        f"Действуй строго по регламенту агентной системы"
+        f"В случае эскалации - завершай workflow"
+        f"Jira проекта KAN, Qase проект AAH"
     )
 
 
     # =========================================================
     # ЗАПУСК OPENCODE
     # =========================================================
-
+    opencode_executable = shutil.which("opencode")
     process = subprocess.Popen(
         [
-            "opencode",
+            opencode_executable,
             "run",
+            "-m",
+            "llm-router-org/deepseek-v4-flash",
             "--format",
             "json",
-            "--dir",
-            str(project_path),
             prompt
         ],
         cwd=project_path,
