@@ -2,11 +2,13 @@
   "mcp": {
       "jira": {
         "type": "remote",
-        "url": "https://mcp.atlassian.com/v2/mcp"
+        "url": "https://mcp.atlassian.com/v2/mcp",
+        "timeout": 30000
       },
       "qase": {
         "type": "local",
-        "command": ["npx.cmd", "-y", "@qase/mcp-server"]
+        "command": ["npx.cmd", "-y", "@qase/mcp-server"],
+        "timeout": 60000
       }
   }
 }

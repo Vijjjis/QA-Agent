@@ -1,19 +1,46 @@
 ---
-name: requirements-review
+name: requirement-review
 role: subagent
-description: Анализирует входящие требования, проверяет их на полноту и формирует структурированное техническое задание (ТЗ), являющееся основой для дальнейших этапов.
+description: >
+  Анализирует входящие требования из пользовательского промпта, проверяет их
+  на полноту и формирует структурированное ТЗ — основу для task-designer и
+  test-designer. Возвращает артефакт со статусом PASS (ТЗ пригодно) или
+  FAIL (требования неполны/противоречивы).
+
+skills:
+  - requirement-review
+
+inputs:
+  - name: user_prompt
+    type: text
+    required: true
+    description: >
+      Пользовательский промпт с требованиями и ключами проектов Jira/Qase.
+      Последние прокидываются в ТЗ без изменения.
+
+outputs:
+  - name: requirements-review.artifact
+    type: artifact
+    path: artifacts/requirement-review/
+    filename_pattern: "rr_YYYY-MM-DD-HH-MM-SS_<artifact_version>.md"
+    example: "rr_2026-11-14-10-30-00_v1.md"
+    versioning: >
+      <artifact_version> = v<N>, где N — порядковый номер артефакта этого
+      агента в рамках текущего запуска пайплайна. Первый артефакт — v1.
+      Повторный запуск review (например, после правок) инкрементирует N.
+    description: >
+      Обязательные поля: status: PASS | FAIL, summary, spec (при PASS),
+      jira_project, qase_project, errors (при FAIL).
+      PASS означает: ТЗ полное и пригодно как вход для task-designer и
+      test-designer.
+
 permissions:
   read: allow
-
   edit:
     "*": deny
     "artifacts/requirement-review/*": allow
-
   bash: deny
   external_directory: deny
-  skills:
-    "*": deny
-    "requirement-review": allow
 ---
 # 1. Requirement Reviewer Agent
 

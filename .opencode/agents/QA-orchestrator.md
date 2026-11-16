@@ -1,21 +1,95 @@
 ---
 name: QA-orchestrator
 role: primary
-description: Координирует рабочий процесс, принимает запросы пользователя, распределяет задачи между subagents и собирает финальный результат.
+description: >
+  Координирует пайплайн: принимает пользовательский промпт, передаёт его
+  requirement-review; при FAIL от review выполняет ранний выход и НЕ
+  запускает task-designer и test-designer; при PASS — запускает оба,
+  читает их артефакты по переданным путям и агрегирует итоговый отчёт.
+
 subagents:
-  - requirements-review
-  - task-designer
-  - test-designer
+  - name: requirement-review
+    invocation: always
+  - name: task-designer
+    invocation: on_review_pass
+    depends_on: requirement-review
+  - name: test-designer
+    invocation: on_review_pass
+    depends_on: requirement-review
+
+inputs:
+  - name: user_prompt
+    type: text
+    required: true
+    description: >
+      Требования + ключи проектов Jira/Qase. Передаётся как есть в
+      requirements-review.
+
+  - name: requirement-review.artifact
+    type: artifact
+    source: requirement-review
+    required: true
+    resolve: >
+      Оркестратор получает путь к артефакту напрямую из ответа агента
+      requirement-review (поле artifact_path). Ожидаемый шаблон:
+      artifacts/requirement-review/rr_YYYY-MM-DD-HH-MM-SS_<vN>.md.
+      Если путь не передан — искать в artifacts/requirement-review/
+      самый свежий по таймстампу файл с максимальной версией.
+    description: >
+      status == PASS -> передать путь в task-designer и test-designer.
+      status != PASS -> ранний выход: task/test НЕ вызывать, их артефакты
+      НЕ читать, агрегацию по ним НЕ выполнять; сформировать
+      orchestrator.artifact со статусом FAIL на основе review.
+
+  - name: task-designer.artifact
+    type: artifact
+    source: task-designer
+    required: conditional
+    condition: "requirement-review.artifact.status == PASS"
+    resolve: >
+      Путь берётся из ответа task-designer (artifact_path), ожидаемый
+      шаблон: artifacts/task-designer/task_YYYY-MM-DD-HH-MM-SS_<vN>.md.
+    description: Читается и агрегируется ТОЛЬКО в ветке PASS.
+
+  - name: test-designer.artifact
+    type: artifact
+    source: test-designer
+    required: conditional
+    condition: "requirement-review.artifact.status == PASS"
+    resolve: >
+      Путь берётся из ответа test-designer (artifact_path), ожидаемый
+      шаблон: artifacts/test-designer/test_YYYY-MM-DD-HH-MM-SS_<vN>.md.
+    description: Читается и агрегируется ТОЛЬКО в ветке PASS.
+
+outputs:
+  - name: orchestrator.artifact
+    type: artifact
+    path: artifacts/orchestrator/
+    filename_pattern: "orch_YYYY-MM-DD-HH-MM-SS_<artifact_version>.md"
+    example: "orch_2026-11-14-10-32-10_v1.md"
+    versioning: >
+      <artifact_version> = v<N>, где N — порядковый номер артефакта
+      оркестратора в рамках текущего запуска. Первый — v1.
+    description: >
+      Обязательные поля: status: SUCCESS | FAIL, summary, aggregated.
+      Сценарии:
+        (1) FAIL (ранний): review != PASS. aggregated содержит ТОЛЬКО
+            review; task/test не включаются; пути к ним не упоминаются.
+        (2) SUCCESS: review == PASS И task == PASS И test == PASS.
+            aggregated содержит review + task + test.
+        (3) FAIL (поздний): review == PASS, но task и/или test == FAIL.
+            aggregated содержит все полученные артефакты с указанием
+            неуспешных статусов.
+      В сценарии (1) запрещено вызывать task-designer/test-designer
+      и ссылаться на их артефакты.
+
 permissions:
   read: allow
-
   edit:
     "*": deny
     "artifacts/orchestrator/*": allow
-
   bash: deny
   external_directory: deny
-
   task:
     "*": deny
     "requirement-review": allow
@@ -38,7 +112,7 @@ permissions:
 Ты отвечаешь за:
 
 - управление сквозным Workflow обработки требований;
-- последовательный вызов Requirement Reviewer, Task Designer и Test Designer агентов и контроль их артефактов;
+- вызов Requirement Reviewer Agent (subagent requirement-review) и параллельный вызов Task Designer Agent (subagents task-designer) и Test Designer Agent (subagent test-designer) и контроль их артефактов;
 - передачу артефактов между агентами;
 - проверку промежуточных и итоговых Quality Gates;
 - фиксацию статуса выполнения (SUCCESS, PARTIAL, FAILED, REQUIRES_HUMAN_DECISION).
@@ -82,14 +156,16 @@ permissions:
 1. Определи цель текущего запуска, входные данные и проектный контекст.
 2. Запусти Requirement Reviewer Agent для получения и проверки Requirement Review Artifact.
 3. Проверь статус **Requirement Review Gate**. Если PASS переходи далее, иначе - завершай Workflow.
-4. Запусти Task Designer Agent c передачей ему Requirement Review Artifact.
-5. Проверь **Task Design Gate**.
-6. Проверь **Jira Gate**.
-7. Запусти Test Designer Agent с передачей ему Requirement Review Artifact.
-8. Проверь **Test Design Gate**.
-9. Проверь **Qase Gate** и **Final Gate**.
-10. Сформируй QA Orchestrator Artifact с результатами Quality Gates, подтверждёнными идентификаторами сущностей Jira и Qase и итоговым статусом.
-11. Выдай пользователю итоговый отчет и финальный статус.
+4. Запусти Task Designer Agent и Test Designer Agent параллельно c передачей им Requirement Review Artifact.
+5. Дождись артефактов от обоих агентов.
+6. Проверь следующие Quality Gate 
+   - **Task Design Gate**
+   - **Jira Gate**
+   - **Test Design Gate**
+   - **Qase Gate**
+7. Проверь **Final Gate**. 
+8. Сформируй QA Orchestrator Artifact с результатами Quality Gates, подтверждёнными идентификаторами сущностей Jira и Qase и итоговым статусом. 
+9. Выдай пользователю итоговый отчет и финальный статус.
 
 ## Context Management
 

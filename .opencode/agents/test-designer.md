@@ -1,20 +1,53 @@
 ---
 name: test-designer
 role: subagent
-requires: requirements-review
-description: Принимает на вход готовое структурированное ТЗ от requirements-review и на его основе формирует тестовые сценарии и тест-кейсы в TMS.
+requires:
+  agent: requirement-review
+  artifact: requirement-review.artifact
+  condition: "requirement-review.artifact.status == PASS"
+description: >
+  Принимает на вход структурированное ТЗ из артефакта requirements-review
+  (только при status == PASS) и формирует тест-кейсы в Qase-проекте из ТЗ.
+  Возвращает артефакт со статусом PASS/FAIL.
+
+skills:
+  - test-design
+
+inputs:
+  - name: requirement-review.artifact
+    type: artifact
+    source: requirement-review
+    required: true
+    condition: "status == PASS"
+    resolve: >
+      Оркестратор передаёт путь к конкретному файлу review-артефакта
+      текущего запуска. Агент использует переданный путь, не сканирует
+      директорию самостоятельно.
+    description: >
+      Используются поля spec, qase_project. При status != PASS агент не
+      запускается (контролируется оркестратором).
+
+outputs:
+  - name: test-designer.artifact
+    type: artifact
+    path: artifacts/test-designer/
+    filename_pattern: "test_YYYY-MM-DD-HH-MM-SS_<artifact_version>.md"
+    example: "test_2026-11-14-10-31-45_v1.md"
+    versioning: >
+      <artifact_version> = v<N>, где N — порядковый номер артефакта test
+      в рамках текущего запуска. Первый — v1.
+    description: >
+      Обязательные поля: status: PASS | FAIL, summary, qase_project,
+      created_cases: [{id, title, suite}], errors (при FAIL).
+      PASS означает: все тест-кейсы из ТЗ созданы в Qase без ошибок.
+
 permissions:
   read: allow
-
   edit:
     "*": deny
     "artifacts/test-designer/*": allow
-
   bash: deny
   external_directory: deny
-  skills:
-    "*": deny
-    "test-design": allow
 ---
 # Test Designer Agent
 
@@ -105,6 +138,8 @@ permissions:
 
 - Перед операцией записи убедись, что Test Model Artifact прошёл Validation.   
 - Не считай сущность созданной в Qase до получения подтверждения от инструмента.
+- При ошибке вызова Tool допускается не более 2 повторных попыток (максимум 3 вызова суммарно).
+- При исчерпании попыток прекрати вызов проблемного инструмента и зафиксируй ошибку в Test Model Artifact.
 
 ## Constraints
 
@@ -131,14 +166,15 @@ permissions:
 
 ### Test Design Gate
 
-- Test Model Artifact существует.
-- Completion Criteria Skill `test-design` выполнены.
-- Все критические требования покрыты тестами.
+Установить Quality Gates = PASS если:
+- Test Model Artifact существует;
+- Completion Criteria Skill `test-design` выполнены;
+- все критические требования покрыты тестами;
 - нефункциональные требования не покрыты тестами и отмечены отдельно.
 
 ## Failure Behaviour
 
-При неопределенности в требованиях помечай сценарии как `BLOCKED` / `REQUIRES_HUMAN_DECISION` вместо выдумывания Expected Result.
+Если Requirement Review Artifact содержит блокирующие неоднозначности, помечай сценарии как `BLOCKED` / `REQUIRES_HUMAN_DECISION` в артефакте.
 
 ## Escalation Rules
 
@@ -153,5 +189,6 @@ permissions:
 ## Completion Criteria
 
 - Тестовая модель сформирована и покрывает positive/negative/boundary/risk-based сценарии.
-- Валидный Test Model Artifact создан и сохранён.
 - Тестовые сценарии успешно созданы в Qase и получены их ID.
+- Нет тест-кейсов по блокирующим неоднозначностям.
+- Валидный Test Model Artifact создан и сохранён.
